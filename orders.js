@@ -1,4 +1,6 @@
+// orders.js
 const cuid = require('cuid')
+
 const db = require('./db')
 
 const Order = db.model('Order', {
@@ -6,7 +8,7 @@ const Order = db.model('Order', {
   buyerEmail: { type: String, required: true },
   products: [{
     type: String,
-    ref: 'Product',
+    ref: 'Product', // ref will automatically fetch associated products for us
     index: true,
     required: true
   }],
@@ -18,8 +20,14 @@ const Order = db.model('Order', {
   }
 })
 
+/**
+ * List orders
+ * @param {Object} options
+ * @returns {Promise<Array>}
+ */
 async function list(options = {}) {
-  const { offset = 0, limit = 25, productId, status } = options
+
+  const { offset = 0, limit = 25, productId, status } = options;
 
   const productQuery = productId ? {
     products: productId
@@ -42,7 +50,14 @@ async function list(options = {}) {
   return orders
 }
 
-async function get(_id) {
+/**
+ * Get an order
+ * @param {Object} order
+ * @returns {Promise<Object>}
+ */
+async function get (_id) {
+  // using populate will automatically fetch the associated products.
+  // if you don't use populate, you will only get the product ids
   const order = await Order.findById(_id)
     .populate('products')
     .exec()
@@ -50,32 +65,40 @@ async function get(_id) {
   return order
 }
 
-async function create(fields) {
+/**
+ * Create an order
+ * @param {Object} order
+ * @returns {Promise<Object>}
+ */
+async function create (fields) {
   const order = await new Order(fields).save()
   await order.populate('products')
   return order
 }
 
-async function edit(_id, change) {
-  const order = await get(_id)
-  
-  Object.keys(change).forEach(function(key) {
-    order[key] = change[key]
-  })
-  
-  await order.save()
-  await order.populate('products')
-  return order
-}
 
-async function destroy(_id) {
-  return await Order.deleteOne({ _id })
-}
+async function edit (_id, change) {
+    const order = await get(_id)
+  
+    // todo can we use spread operators here?
+    Object.keys(change).forEach(function (key) {
+      order[key] = change[key]
+    })
+    
+    await order.save()
+  
+    return order
+  }
+  
+
+  async function destroy (_id) {
+    return await Order.deleteOne({_id})
+  }
 
 module.exports = {
-  list,
-  get,
-  create,
-  edit,
-  destroy
-}
+    list,
+    get,
+    create,
+    edit,
+    destroy
+  }
